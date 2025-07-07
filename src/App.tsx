@@ -10,6 +10,7 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import PatientsPage from './pages/PatientsPage';
 import AppointmentsPage from './pages/AppointmentsPage';
+import ProfilePage from './pages/ProfilePage';
 import './App.css';
 
 const theme = createTheme({
@@ -70,6 +71,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <AppointmentsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <ProfilePage />
                   </ProtectedRoute>
                 }
               />

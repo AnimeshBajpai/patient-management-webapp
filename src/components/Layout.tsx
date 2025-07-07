@@ -25,6 +25,7 @@ import {
   CalendarToday,
   Logout,
   AccountCircle,
+  Person,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -120,15 +121,40 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             Patient Management System
           </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Typography variant="body2" sx={{ mr: 2, display: { xs: 'none', sm: 'block' } }}>
-              {user?.name}
-            </Typography>
-            <IconButton onClick={handleProfileMenuOpen} color="inherit">
-              <Avatar sx={{ width: 32, height: 32 }}>
-                <AccountCircle />
-              </Avatar>
-            </IconButton>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {user && (
+              <>
+                <Box sx={{ display: { xs: 'none', sm: 'block' }, textAlign: 'right' }}>
+                  <Typography variant="body2" fontWeight="bold">
+                    {user.displayName}
+                  </Typography>
+                  <Typography variant="caption" color="inherit" sx={{ opacity: 0.8 }}>
+                    {user.userType.toLowerCase() === 'doctor' ? 'Doctor' : 
+                     user.userType.toLowerCase() === 'patient' ? 'Patient' : 'Admin'}
+                  </Typography>
+                </Box>
+                <IconButton onClick={handleProfileMenuOpen} color="inherit">
+                  <Avatar 
+                    sx={{ 
+                      width: 36, 
+                      height: 36, 
+                      bgcolor: 'rgba(255,255,255,0.1)',
+                      fontSize: '1rem',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    {user.initials}
+                  </Avatar>
+                </IconButton>
+              </>
+            )}
+            {!user && (
+              <IconButton onClick={handleProfileMenuOpen} color="inherit">
+                <Avatar sx={{ width: 36, height: 36 }}>
+                  <AccountCircle />
+                </Avatar>
+              </IconButton>
+            )}
           </Box>
         </Toolbar>
       </AppBar>
@@ -146,6 +172,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           horizontal: 'right',
         }}
       >
+        {user && (
+          <MenuItem onClick={() => { navigate('/profile'); handleProfileMenuClose(); }}>
+            <ListItemIcon>
+              <Person fontSize="small" />
+            </ListItemIcon>
+            View Profile
+          </MenuItem>
+        )}
         <MenuItem onClick={handleLogout}>
           <ListItemIcon>
             <Logout fontSize="small" />

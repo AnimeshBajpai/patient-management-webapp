@@ -35,12 +35,21 @@ import {
   CalendarToday as CalendarIcon,
   AccessTime as TimeIcon,
   Person as PersonIcon,
+  Cancel as CancelIcon,
+  CheckCircle as CompleteIcon,
 } from '@mui/icons-material';
 import { DatePicker, TimePicker } from '@mui/x-date-pickers';
 import dayjs from 'dayjs';
 import Layout from '../components/Layout';
 import { appointmentService, patientService } from '../services/api';
-import { Appointment, Patient } from '../types';
+import { 
+  Appointment, 
+  Patient, 
+  AddAppointmentRequest, 
+  UpdateAppointmentRequest,
+  APPOINTMENT_STATUS_LABELS,
+  AppointmentStatus 
+} from '../types';
 
 const AppointmentsPage: React.FC = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -48,17 +57,18 @@ const AppointmentsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<AddAppointmentRequest>({
     patientId: '',
-    patientName: '',
     doctorId: '1', // Default doctor
     doctorName: 'Dr. Smith',
-    date: '',
-    time: '',
-    duration: 30,
+    appointmentDate: '',
+    appointmentTime: '',
+    durationMinutes: 30,
     reason: '',
-    status: 'scheduled' as 'scheduled' | 'completed' | 'cancelled' | 'no-show',
     notes: '',
+    appointmentType: 'Consultation',
+    estimatedCost: 150,
+    status: 'SCHEDULED',
   });
   
   const theme = useTheme();
@@ -88,29 +98,31 @@ const AppointmentsPage: React.FC = () => {
       setEditingAppointment(appointment);
       setFormData({
         patientId: appointment.patientId,
-        patientName: appointment.patientName,
         doctorId: appointment.doctorId,
         doctorName: appointment.doctorName,
-        date: appointment.date,
-        time: appointment.time,
-        duration: appointment.duration,
-        reason: appointment.reason,
-        status: appointment.status,
+        appointmentDate: appointment.date,
+        appointmentTime: appointment.time,
+        durationMinutes: appointment.duration,
+        reason: appointment.reason || '',
         notes: appointment.notes || '',
+        appointmentType: appointment.appointmentType || 'Consultation',
+        estimatedCost: appointment.estimatedCost || 150,
+        status: appointment.appointmentStatus,
       });
     } else {
       setEditingAppointment(null);
       setFormData({
         patientId: '',
-        patientName: '',
         doctorId: '1',
         doctorName: 'Dr. Smith',
-        date: '',
-        time: '',
-        duration: 30,
+        appointmentDate: '',
+        appointmentTime: '',
+        durationMinutes: 30,
         reason: '',
-        status: 'scheduled',
         notes: '',
+        appointmentType: 'Consultation',
+        estimatedCost: 150,
+        status: 'SCHEDULED',
       });
     }
     setDialogOpen(true);
@@ -122,20 +134,32 @@ const AppointmentsPage: React.FC = () => {
   };
 
   const handlePatientChange = (patientId: string) => {
-    const patient = patients.find(p => p.id === patientId);
+    const patient = patients.find(p => p.uuid === patientId);
     setFormData({
       ...formData,
       patientId,
-      patientName: patient ? `${patient.firstName} ${patient.lastName}` : '',
     });
   };
 
   const handleSaveAppointment = async () => {
     try {
       if (editingAppointment) {
-        await appointmentService.update(editingAppointment.id, formData);
+        const updateData: UpdateAppointmentRequest = {
+          appointmentId: editingAppointment.uuid,
+          doctorId: formData.doctorId,
+          doctorName: formData.doctorName,
+          appointmentDate: formData.appointmentDate,
+          appointmentTime: formData.appointmentTime,
+          durationMinutes: formData.durationMinutes,
+          reason: formData.reason,
+          notes: formData.notes,
+          appointmentType: formData.appointmentType,
+          estimatedCost: formData.estimatedCost,
+          status: formData.status,
+        };
+        await appointmentService.update(updateData);
       } else {
-        await appointmentService.create(formData);
+        await appointmentService.schedule(formData);
       }
       fetchData();
       handleCloseDialog();
@@ -155,15 +179,42 @@ const AppointmentsPage: React.FC = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const handleCancelAppointment = async (id: string) => {
+    const reason = prompt('Please enter cancellation reason:');
+    if (reason !== null) {
+      try {
+        await appointmentService.cancel(id, reason);
+        fetchData();
+      } catch (error) {
+        console.error('Error cancelling appointment:', error);
+      }
+    }
+  };
+
+  const handleCompleteAppointment = async (id: string) => {
+    const notes = prompt('Please enter completion notes (optional):');
+    try {
+      await appointmentService.complete(id, notes || undefined);
+      fetchData();
+    } catch (error) {
+      console.error('Error completing appointment:', error);
+    }
+  };
+
+  const getStatusColor = (status: AppointmentStatus): 'primary' | 'success' | 'error' | 'warning' | 'default' => {
     switch (status) {
-      case 'scheduled':
+      case 'SCHEDULED':
+      case 'CONFIRMED':
         return 'primary';
-      case 'completed':
+      case 'COMPLETED':
         return 'success';
-      case 'cancelled':
+      case 'CANCELLED':
         return 'error';
-      case 'no-show':
+      case 'NO_SHOW':
+        return 'warning';
+      case 'IN_PROGRESS':
+        return 'primary';
+      case 'RESCHEDULED':
         return 'warning';
       default:
         return 'default';
@@ -215,7 +266,7 @@ const AppointmentsPage: React.FC = () => {
         // Mobile card layout
         <Grid container spacing={2}>
           {appointments.map((appointment) => (
-            <Grid item xs={12} key={appointment.id}>
+            <Grid item xs={12} key={appointment.uuid}>
               <Card>
                 <CardContent>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
@@ -224,9 +275,9 @@ const AppointmentsPage: React.FC = () => {
                         {appointment.patientName}
                       </Typography>
                       <Chip 
-                        label={appointment.status} 
+                        label={APPOINTMENT_STATUS_LABELS[appointment.appointmentStatus]} 
                         size="small" 
-                        color={getStatusColor(appointment.status) as any}
+                        color={getStatusColor(appointment.appointmentStatus) as any}
                         variant="outlined"
                       />
                     </Box>
@@ -234,7 +285,7 @@ const AppointmentsPage: React.FC = () => {
                       <IconButton onClick={() => handleOpenDialog(appointment)} size="small">
                         <EditIcon />
                       </IconButton>
-                      <IconButton onClick={() => handleDeleteAppointment(appointment.id)} size="small" color="error">
+                      <IconButton onClick={() => handleDeleteAppointment(appointment.uuid)} size="small" color="error">
                         <DeleteIcon />
                       </IconButton>
                     </Box>
@@ -275,7 +326,7 @@ const AppointmentsPage: React.FC = () => {
             </TableHead>
             <TableBody>
               {appointments.map((appointment) => (
-                <TableRow key={appointment.id} hover>
+                <TableRow key={appointment.uuid} hover>
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <PersonIcon sx={{ mr: 1, color: 'text.secondary' }} />
@@ -288,20 +339,29 @@ const AppointmentsPage: React.FC = () => {
                   <TableCell>{appointment.reason}</TableCell>
                   <TableCell>
                     <Chip 
-                      label={appointment.status} 
+                      label={APPOINTMENT_STATUS_LABELS[appointment.appointmentStatus]} 
                       size="small" 
-                      color={getStatusColor(appointment.status) as any}
+                      color={getStatusColor(appointment.appointmentStatus) as any}
                       variant="outlined"
                     />
-                  </TableCell>
-                  <TableCell>
-                    <IconButton onClick={() => handleOpenDialog(appointment)} color="primary">
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton onClick={() => handleDeleteAppointment(appointment.id)} color="error">
-                      <DeleteIcon />
-                    </IconButton>
-                  </TableCell>
+                  </TableCell>                      <TableCell>
+                        <IconButton onClick={() => handleOpenDialog(appointment)} color="primary">
+                          <EditIcon />
+                        </IconButton>
+                        <IconButton onClick={() => handleDeleteAppointment(appointment.uuid)} color="error">
+                          <DeleteIcon />
+                        </IconButton>
+                        {appointment.appointmentStatus === 'SCHEDULED' && (
+                          <IconButton onClick={() => handleCancelAppointment(appointment.uuid)} color="warning">
+                            <DeleteIcon />
+                          </IconButton>
+                        )}
+                        {appointment.appointmentStatus === 'IN_PROGRESS' && (
+                          <IconButton onClick={() => handleCompleteAppointment(appointment.uuid)} color="success">
+                            <EditIcon />
+                          </IconButton>
+                        )}
+                      </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -325,7 +385,7 @@ const AppointmentsPage: React.FC = () => {
                   onChange={(e) => handlePatientChange(e.target.value)}
                 >
                   {patients.map((patient) => (
-                    <MenuItem key={patient.id} value={patient.id}>
+                    <MenuItem key={patient.uuid} value={patient.uuid}>
                       {patient.firstName} {patient.lastName}
                     </MenuItem>
                   ))}
@@ -334,10 +394,9 @@ const AppointmentsPage: React.FC = () => {
             </Grid>
             <Grid item xs={12} sm={6}>
               <DatePicker
-                label="Date"
-                value={formData.date ? dayjs(formData.date) : null}
-                onChange={(date) => 
-                  setFormData({ ...formData, date: date ? date.format('YYYY-MM-DD') : '' })
+                label="Date"                value={formData.appointmentDate ? dayjs(formData.appointmentDate) : null}
+                onChange={(date) =>
+                  setFormData({ ...formData, appointmentDate: date ? date.format('YYYY-MM-DD') : '' })
                 }
                 slotProps={{
                   textField: {
@@ -349,10 +408,9 @@ const AppointmentsPage: React.FC = () => {
             </Grid>
             <Grid item xs={12} sm={6}>
               <TimePicker
-                label="Time"
-                value={formData.time ? dayjs(`2024-01-01 ${formData.time}`) : null}
-                onChange={(time) => 
-                  setFormData({ ...formData, time: time ? time.format('HH:mm') : '' })
+                label="Time"                value={formData.appointmentTime ? dayjs(`2024-01-01 ${formData.appointmentTime}`) : null}
+                onChange={(time) =>
+                  setFormData({ ...formData, appointmentTime: time ? time.format('HH:mm') : '' })
                 }
                 slotProps={{
                   textField: {
@@ -367,8 +425,8 @@ const AppointmentsPage: React.FC = () => {
                 fullWidth
                 label="Duration (minutes)"
                 type="number"
-                value={formData.duration}
-                onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 30 })}
+                value={formData.durationMinutes}
+                onChange={(e) => setFormData({ ...formData, durationMinutes: parseInt(e.target.value) || 30 })}
                 required
                 inputProps={{ min: 15, max: 120, step: 15 }}
               />

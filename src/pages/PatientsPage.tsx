@@ -22,6 +22,7 @@ import {
   CardContent,
   useTheme,
   useMediaQuery,
+  MenuItem,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -36,26 +37,35 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import Layout from '../components/Layout';
 import { patientService } from '../services/api';
-import { Patient } from '../types';
+import { Patient, AddPatientRequest, UpdatePatientRequest } from '../types';
 
 const PatientsPage: React.FC = () => {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<AddPatientRequest>({
     firstName: '',
     lastName: '',
     dateOfBirth: '',
     email: '',
-    phone: '',
+    mobile: '',
     address: '',
     medicalHistory: '',
     allergies: '',
+    emergencyContactName: '',
+    emergencyContactPhone: '',
+    insuranceProvider: '',
+    insurancePolicyNumber: '',
+    bloodGroup: '',
+    gender: '',
   });
   
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
+  const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+  const genders = ['Male', 'Female', 'Other'];
 
   useEffect(() => {
     fetchPatients();
@@ -80,10 +90,16 @@ const PatientsPage: React.FC = () => {
         lastName: patient.lastName,
         dateOfBirth: patient.dateOfBirth,
         email: patient.email,
-        phone: patient.phone,
+        mobile: patient.mobile,
         address: patient.address,
-        medicalHistory: patient.medicalHistory,
-        allergies: patient.allergies,
+        medicalHistory: patient.medicalHistory || '',
+        allergies: patient.allergies || '',
+        emergencyContactName: patient.emergencyContactName || '',
+        emergencyContactPhone: patient.emergencyContactPhone || '',
+        insuranceProvider: patient.insuranceProvider || '',
+        insurancePolicyNumber: patient.insurancePolicyNumber || '',
+        bloodGroup: patient.bloodGroup || '',
+        gender: patient.gender || '',
       });
     } else {
       setEditingPatient(null);
@@ -92,10 +108,16 @@ const PatientsPage: React.FC = () => {
         lastName: '',
         dateOfBirth: '',
         email: '',
-        phone: '',
+        mobile: '',
         address: '',
         medicalHistory: '',
         allergies: '',
+        emergencyContactName: '',
+        emergencyContactPhone: '',
+        insuranceProvider: '',
+        insurancePolicyNumber: '',
+        bloodGroup: '',
+        gender: '',
       });
     }
     setDialogOpen(true);
@@ -109,7 +131,11 @@ const PatientsPage: React.FC = () => {
   const handleSavePatient = async () => {
     try {
       if (editingPatient) {
-        await patientService.update(editingPatient.id, formData);
+        const updateData: UpdatePatientRequest = {
+          patientId: editingPatient.uuid,
+          ...formData,
+        };
+        await patientService.update(updateData);
       } else {
         await patientService.create(formData);
       }
@@ -177,7 +203,7 @@ const PatientsPage: React.FC = () => {
         // Mobile card layout
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {patients.map((patient) => (
-            <Card key={patient.id}>
+            <Card key={patient.uuid}>
               <CardContent>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                     <Box>
@@ -195,7 +221,7 @@ const PatientsPage: React.FC = () => {
                       <IconButton onClick={() => handleOpenDialog(patient)} size="small">
                         <EditIcon />
                       </IconButton>
-                      <IconButton onClick={() => handleDeletePatient(patient.id)} size="small" color="error">
+                      <IconButton onClick={() => handleDeletePatient(patient.uuid)} size="small" color="error">
                         <DeleteIcon />
                       </IconButton>
                     </Box>
@@ -208,7 +234,7 @@ const PatientsPage: React.FC = () => {
                   
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                     <PhoneIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
-                    <Typography variant="body2">{patient.phone}</Typography>
+                    <Typography variant="body2">{patient.mobile}</Typography>
                   </Box>
                   
                   <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
@@ -237,7 +263,7 @@ const PatientsPage: React.FC = () => {
             </TableHead>
             <TableBody>
               {patients.map((patient) => (
-                <TableRow key={patient.id} hover>
+                <TableRow key={patient.uuid} hover>
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <PersonIcon sx={{ mr: 1, color: 'text.secondary' }} />
@@ -253,13 +279,13 @@ const PatientsPage: React.FC = () => {
                     />
                   </TableCell>
                   <TableCell>{patient.email}</TableCell>
-                  <TableCell>{patient.phone}</TableCell>
+                  <TableCell>{patient.mobile}</TableCell>
                   <TableCell>{patient.address}</TableCell>
                   <TableCell>
                     <IconButton onClick={() => handleOpenDialog(patient)} color="primary">
                       <EditIcon />
                     </IconButton>
-                    <IconButton onClick={() => handleDeletePatient(patient.id)} color="error">
+                    <IconButton onClick={() => handleDeletePatient(patient.uuid)} color="error">
                       <DeleteIcon />
                     </IconButton>
                   </TableCell>
@@ -306,11 +332,24 @@ const PatientsPage: React.FC = () => {
             />
             <TextField
               fullWidth
-              label="Phone"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              label="Mobile"
+              value={formData.mobile}
+              onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
               required
             />
+            <TextField
+              fullWidth
+              label="Gender"
+              select
+              value={formData.gender}
+              onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+            >
+              {genders.map((gender) => (
+                <MenuItem key={gender} value={gender}>
+                  {gender}
+                </MenuItem>
+              ))}
+            </TextField>
             <TextField
               fullWidth
               label="Email"
@@ -348,6 +387,43 @@ const PatientsPage: React.FC = () => {
               onChange={(e) => setFormData({ ...formData, allergies: e.target.value })}
               sx={{ gridColumn: { xs: 'span 1', sm: 'span 2' } }}
             />
+            <TextField
+              fullWidth
+              label="Emergency Contact Name"
+              value={formData.emergencyContactName}
+              onChange={(e) => setFormData({ ...formData, emergencyContactName: e.target.value })}
+            />
+            <TextField
+              fullWidth
+              label="Emergency Contact Phone"
+              value={formData.emergencyContactPhone}
+              onChange={(e) => setFormData({ ...formData, emergencyContactPhone: e.target.value })}
+            />
+            <TextField
+              fullWidth
+              label="Insurance Provider"
+              value={formData.insuranceProvider}
+              onChange={(e) => setFormData({ ...formData, insuranceProvider: e.target.value })}
+            />
+            <TextField
+              fullWidth
+              label="Insurance Policy Number"
+              value={formData.insurancePolicyNumber}
+              onChange={(e) => setFormData({ ...formData, insurancePolicyNumber: e.target.value })}
+            />
+            <TextField
+              fullWidth
+              label="Blood Group"
+              select
+              value={formData.bloodGroup}
+              onChange={(e) => setFormData({ ...formData, bloodGroup: e.target.value })}
+            >
+              {bloodGroups.map((group) => (
+                <MenuItem key={group} value={group}>
+                  {group}
+                </MenuItem>
+              ))}
+            </TextField>
           </Box>
         </DialogContent>
         <DialogActions>
