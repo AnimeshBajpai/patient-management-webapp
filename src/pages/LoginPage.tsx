@@ -145,17 +145,6 @@ const LoginPage: React.FC = () => {
     setResendTimer(0);
   };
 
-  const demoCredentials = [
-    { mobile: '1234567890', userType: 'DOCTOR', label: 'Demo Doctor', otp: '9999' },
-    { mobile: '9876543210', userType: 'PATIENT', label: 'Demo Patient', otp: '9999' },
-  ];
-
-  const fillDemoCredentials = (demoMobile: string, demoUserType: string) => {
-    setMobile(demoMobile);
-    setUserType(demoUserType);
-    setCurrentStep('mobile');
-  };
-
   const steps = ['Enter Mobile Number', 'Verify OTP'];
 
   return (
@@ -383,28 +372,6 @@ const LoginPage: React.FC = () => {
                 )}
               </form>
             )}
-
-            {/* Demo Credentials */}
-            <Box sx={{ mt: 3 }}>
-              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                Demo Credentials (OTP: 9999):
-              </Typography>
-              {demoCredentials.map((cred, index) => (
-                <Button
-                  key={index}
-                  variant="outlined"
-                  size="small"
-                  onClick={() => fillDemoCredentials(cred.mobile, cred.userType)}
-                  sx={{ mr: 1, mb: 1 }}
-                >
-                  {cred.label}
-                </Button>
-              ))}
-            </Box>
-
-            <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 3 }}>
-              Use the demo credentials above to explore the application with test OTP: 9999
-            </Typography>
           </CardContent>
         </Paper>
       </Container>

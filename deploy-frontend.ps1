@@ -129,10 +129,6 @@ if ($appUrl) {
     Write-Host "🔗 Backend API: https://userservice-app-sea.azurewebsites.net/user-service" -ForegroundColor Cyan
     Write-Host "🏷️  Deployed Image: $imageTag" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "Demo Credentials (Mobile OTP Authentication):" -ForegroundColor Yellow
-    Write-Host "Doctor: Mobile 1234567890, OTP: 9999" -ForegroundColor White
-    Write-Host "Patient: Mobile 9876543210, OTP: 9999" -ForegroundColor White
-    Write-Host ""
     Write-Host "Features Updated:" -ForegroundColor Green
     Write-Host "✅ Mobile OTP Authentication" -ForegroundColor White
     Write-Host "✅ User Profile Display in Dashboard" -ForegroundColor White

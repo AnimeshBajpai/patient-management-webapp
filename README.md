@@ -11,7 +11,7 @@ A modern, responsive patient management web application built with React and Typ
 
 ### 👥 User Management
 - **Role-Based Access**: Separate interfaces for doctors and patients
-- **Secure Authentication**: Login system with demo credentials
+- **Secure Authentication**: Mobile OTP-based authentication system
 - **User Profiles**: Personalized experience based on user role
 
 ### 🏥 Patient Management
@@ -83,13 +83,6 @@ A modern, responsive patient management web application built with React and Typ
 
 5. **Access the application**
    Open [http://localhost:3000](http://localhost:3000) in your browser
-
-### Demo Credentials
-
-| Role | Email | Password |
-|------|-------|----------|
-| Doctor | doctor@example.com | password |
-| Patient | patient@example.com | password |
 
 ## 🏥 Backend API
 
